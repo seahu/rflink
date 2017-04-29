@@ -17,12 +17,12 @@ Addions plugins may by add into standart diractory *../Plugins* and enableb in *
 
 ## Run from comandline
 Use:
- */opt/rflink/RFlink* 
- */opt/rflink/RFlink TCP_port_number* 
- */opt/rflink/RFlink TCP_port_number log_level_number* 
- */opt/rflink/RFlink TCP_port_number TX_PIN RX_PIN* 
- */opt/rflink/RFlink TCP_port_number TX_PIN RX_PIN log_level_number*
- or */opt/rflink/RFlink -h*  for this help
+ *sudo /opt/rflink/RFlink* 
+ *sudo /opt/rflink/RFlink TCP_port_number* 
+ *sudo /opt/rflink/RFlink TCP_port_number log_level_number* 
+ *sudo /opt/rflink/RFlink TCP_port_number TX_PIN RX_PIN* 
+ *sudo /opt/rflink/RFlink TCP_port_number TX_PIN RX_PIN log_level_number*
+ or *sudo /opt/rflink/RFlink -h*  for this help
 
  TCP_port_number: 1-65535
  log_level number: 0-nothing, 1-error log, 2-warning, 3-running status, 4-debug
