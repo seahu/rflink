@@ -5,14 +5,6 @@ This modification enable connect RF tranceiver and receiver directly into free r
 Instead comunication with serial port use TCP conecction.
 This modification use interrupt and theaders for reduce cpu load.
 
-
-rcswitch-pi is for controlling rc remote controlled power sockets 
-with the raspberry pi. Kudos to the projects [rc-switch](http://code.google.com/p/rc-switch)
-and [wiringpi](https://projects.drogon.net/raspberry-pi/wiringpi).
-I just adapted the rc-switch code to use the wiringpi library instead of
-the library provided by the arduino.
-
-
 ## Compile and install
 #### Compile
 First you have to install the [wiringpi](https://projects.drogon.net/raspberry-pi/wiringpi/download-and-install/) library (also you can install by: apt-get install wiringpi).
