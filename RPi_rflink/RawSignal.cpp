@@ -83,16 +83,75 @@ void handleInterrupt() {
 	static unsigned long lastTime = 0;
 	static unsigned long PulseLength=0L;
 	static int RawCodeLength=1;													// Start at 1 for legacy reasons. Element 0 can be used to pass special information like plugin number etc.
+	static int LastRawCodeLength=1;
+	static unsigned long FristPulseLength=0L;
+
 	// oreginaly algorithm have some code for reduce noise, bat I do not understand this code, therefore I this code removed, otherwise must be retype this code for run in interrrupt.
+	// Later I uderstand this code. Next folow explanation this code in czech language:
+	// Po kladnem prijeti paketu se predpoklda opakovani,
+	// proto se veskera nasledujici komunikace do vyprseni SIGNAL_TIMEOUT u sledovane delky pulzu nezpracovava.
+	// V pripade dlouheho neprerusovaneho vysilani, kde nezabere SIGNAL_TIMEOUT se nespracovavani komunikce ukonci po vyprsenirseni SIGNAL_REPEAT_TIME.
+	// A ted tentyz popis ale krokove:
+	// pokud nejaky modul prijme paket tak vetsinou nastavi RawSignal.Repeats=true protoze se predpoklada ze bue nasledovat opkovani paketu
+	// jestli-ze RawSignal.Repeats==true a jeste neskonci timeouto pro opakovani SIGNAL_REPEAT_TIME
+	//   tak sleduduj delky impulzu a dokud nevprsi timout pro opakovani SIGNAL_REPEAT_TIME nebo max. delka signalu SIGNAL_TIMEOUT
+	//	 pockej na ukonceni probihajiciho pulzu v kterem vyprsel jeden z vyse uvedenych timeoutu.
+	// 
 	const long time = micros();
 	PulseLength = time - lastTime;
 	lastTime = time;
+
+	if ( PulseLength < MIN_PULSE_LENGTH) { // puls is so short -> this is no packet or time out
+		//Serial.println("S");
+		PulseLength=0L;
+		RawCodeLength=1;
+		return;
+	}
 
 	if ( RawCodeLength<RAW_BUFFER_SIZE ) {
 		RawSignal.Pulses[RawCodeLength++]=4+PulseLength/(unsigned long)(RAWSIGNAL_SAMPLE_RATE); // store in RawSignal !!!!  (+4 is corection beatwen arduino cycle time calculate and real time from raspberryPi)
 	}
 	else { // Raw data reach max size
-		setRawSignal(RawCodeLength);
+		//setRawSignal(RawCodeLength);
+		PulseLength=0L;
+		RawCodeLength=1;
+		return;
+	}
+
+	//if ( PulseLength >= SIGNAL_TIMEOUT*1000 ) {
+	if ( PulseLength >= 3500 ) {
+		
+		//Serial.println("S");
+		//Serial.println(abs(FristPulseLength-PulseLength));
+		if (abs(FristPulseLength-PulseLength) < 200 and LastRawCodeLength==RawCodeLength) {
+			//Serial.println("SS");
+			// This long signal is close in length to the long signal which
+			// started the previously recorded timings; this suggests that
+			// it may indeed by a a gap between two transmissions (we assume
+			// here that a sender will send the signal multiple times,
+			// with roughly the same gap between them).
+			RawSignal.Repeats++;
+			if (RawSignal.Repeats == 2) {
+				//Serial.println("SSS");
+				if (RawCodeLength>MIN_RAW_PULSES) {
+					//Serial.println("SSSS");
+					setRawSignal(RawCodeLength); // go to search right 
+				}
+				RawSignal.Repeats = 0;
+			}
+		}
+		FristPulseLength=PulseLength;
+		LastRawCodeLength=RawCodeLength;
+		RawCodeLength=1;
+	}
+	
+
+	/*
+	if ( RawCodeLength<RAW_BUFFER_SIZE ) {
+		RawSignal.Pulses[RawCodeLength++]=4+PulseLength/(unsigned long)(RAWSIGNAL_SAMPLE_RATE); // store in RawSignal !!!!  (+4 is corection beatwen arduino cycle time calculate and real time from raspberryPi)
+	}
+	else { // Raw data reach max size
+		//setRawSignal(RawCodeLength);
 		PulseLength=0L;
 		RawCodeLength=1;
 		return;
@@ -100,12 +159,13 @@ void handleInterrupt() {
 	if ( PulseLength < MIN_PULSE_LENGTH or PulseLength >= SIGNAL_TIMEOUT*1000 ) { // puls is so short -> this is no packet or time out
 		//Serial.println("S");
 		if (RawCodeLength>=MIN_RAW_PULSES) { // Raw data satisfy min. size
-			setRawSignal(RawCodeLength);
+			//setRawSignal(RawCodeLength);
 		}
 		PulseLength=0L;
 		RawCodeLength=1;
 		return;
 	}
+	*/
 }
 
 /**
