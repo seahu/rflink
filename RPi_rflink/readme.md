@@ -17,6 +17,7 @@ Addions plugins may by add into standart diractory *../Plugins* and enableb in *
 
 ## Run from comandline
 Use:
+```
  *sudo /opt/rflink/RFlink* 
  *sudo /opt/rflink/RFlink TCP_port_number* 
  *sudo /opt/rflink/RFlink TCP_port_number log_level_number* 
@@ -28,8 +29,10 @@ Use:
  log_level number: 0-nothing, 1-error log, 2-warning, 3-running status, 4-debug
  TX_PIN - transmitter pin (by wiringpi numbering)
  TR_PIN - receiver pin (by wiringpi numbering)
+```
 
 For view wiringpi numbering pins run command *gpio readall* or see bellow for numbering raspberryPI v3:
+```
  +-----+-----+---------+------+---+---Pi 3---+---+------+---------+-----+-----+
  | BCM | wPi |   Name  | Mode | V | Physical | V | Mode | Name    | wPi | BCM |
  +-----+-----+---------+------+---+----++----+---+------+---------+-----+-----+
@@ -58,8 +61,10 @@ For view wiringpi numbering pins run command *gpio readall* or see bellow for nu
  +-----+-----+---------+------+---+---Pi 3---+---+------+---------+-----+-----+
 
 PS: rigt columb is wPi
+```
 
 ## run as daemon (service)
+
 #### Start
 */etc/init.d/rflink start*
 
@@ -70,9 +75,13 @@ PS: rigt columb is wPi
 *edit file /etc/rflink.conf*
 
 #### defult values:
+
 port: 5050
+
 log level: 4
+
 PIN_TX: 28
+
 PIN_RX: 29
 
 ## Test
@@ -101,8 +110,8 @@ for end connection type:
 
 
 ## Note
-This tested only witch 433MHz receiver, not test transceiver. And tested only with free aviable modules, full version contain much more no tested plugins.
-Raspberry pi generate much more eletrict noise than arduino. This is not problem for load CPU, but some time noise random generate corect data for some plugins.
+
+This tested only witch 433MHz receiver. And tested only with free aviable modules, full version contain much more no tested plugins.
 
 
 ### Autor
