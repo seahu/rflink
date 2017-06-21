@@ -16,6 +16,7 @@ bool ReceiverInterrupt=false; // flag signalzet enabled or disabled interupt (ex
 pthread_cond_t thread_flag_cv;
 pthread_mutex_t thread_flag_mutex;
 pthread_t threadScanEvent_id; // struct for id of scanevent theader
+bool log_repeat=true; // pro ucely ladeni pozdeji smazat
 
 // Oreginaly this function was run cycle with timeout so that can be serve serial line input
 // Now run continualy with waiting for new data who get from function calling by interrupt.
@@ -32,7 +33,9 @@ boolean ScanEvent() {                                         // Deze routine ma
 		log(LOG_HARD_DEBUG,"RawSignal: Wait for packet.");
 		pthread_cond_wait(&thread_flag_cv, &thread_flag_mutex);		// wait for new packed
 		ReceiverInterrupt=false;									// disable Receive
-		PluginRXCall(0,0);											// Check all plugins to see which plugin can handle the received signal.
+		if ( PluginRXCall(0,0) ) {									// Check all plugins to see which plugin can handle the received signal.
+			RepeatingTimer=millis()+SIGNAL_REPEAT_TIME;
+		}
 		ReceiverInterrupt=true;										// anable Receivre
 	}
 	disableReceive();
@@ -62,6 +65,9 @@ int StopScanEventTheader(){
 // Because proces samples data is time consuming and function for serve interrupt must by very short.
 // This function only fill in RawSignal struture and unlock condition varible used in function ScanEvent() who do main work for process data.
 void setRawSignal(int RawCodeLength){
+	sprintf(pbuffer,"Spracovani paketu delky:: %d",RawCodeLength);
+	log(LOG_STATUS,pbuffer);
+	
 	pthread_mutex_lock(&thread_flag_mutex);
 	
 	RawSignal.Repeats=0;                                                      // no repeats
@@ -69,7 +75,8 @@ void setRawSignal(int RawCodeLength){
 	RawSignal.Number=RawCodeLength-1;                                         // Number of received pulse times (pulsen *2)
 	RawSignal.Pulses[RawSignal.Number+1]=0;                                   // Last element contains the timeout. 
 	RawSignal.Time=millis();                                                  // Time the RF packet was received (to keep track of retransmits
-	RawCodeLength=1;															// Start at 1 for legacy reasons. Element 0 can be used to pass special information like plugin number etc.
+	//RawCodeLength=1;															// Start at 1 for legacy reasons. Element 0 can be used to pass special information like plugin number etc.
+	RawCodeLength=0;															// Flag for my hook reduces occurrence of packet with noise on beginning.
 	//place for threader conditions set
 	pthread_cond_signal(&thread_flag_cv);
 
@@ -83,89 +90,77 @@ void handleInterrupt() {
 	static unsigned long lastTime = 0;
 	static unsigned long PulseLength=0L;
 	static int RawCodeLength=1;													// Start at 1 for legacy reasons. Element 0 can be used to pass special information like plugin number etc.
-	static int LastRawCodeLength=1;
-	static unsigned long FristPulseLength=0L;
 
-	// oreginaly algorithm have some code for reduce noise, bat I do not understand this code, therefore I this code removed, otherwise must be retype this code for run in interrrupt.
-	// Later I uderstand this code. Next folow explanation this code in czech language:
-	// Po kladnem prijeti paketu se predpoklda opakovani,
-	// proto se veskera nasledujici komunikace do vyprseni SIGNAL_TIMEOUT u sledovane delky pulzu nezpracovava.
-	// V pripade dlouheho neprerusovaneho vysilani, kde nezabere SIGNAL_TIMEOUT se nespracovavani komunikce ukonci po vyprsenirseni SIGNAL_REPEAT_TIME.
-	// A ted tentyz popis ale krokove:
-	// pokud nejaky modul prijme paket tak vetsinou nastavi RawSignal.Repeats=true protoze se predpoklada ze bue nasledovat opkovani paketu
-	// jestli-ze RawSignal.Repeats==true a jeste neskonci timeouto pro opakovani SIGNAL_REPEAT_TIME
-	//   tak sleduduj delky impulzu a dokud nevprsi timout pro opakovani SIGNAL_REPEAT_TIME nebo max. delka signalu SIGNAL_TIMEOUT
-	//	 pockej na ukonceni probihajiciho pulzu v kterem vyprsel jeden z vyse uvedenych timeoutu.
-	// 
 	const long time = micros();
 	PulseLength = time - lastTime;
 	lastTime = time;
+	
+	//Serial.print("Pulse lenght:");
+	//Serial.println(PulseLength);
+	//return;
 
-	if ( PulseLength < MIN_PULSE_LENGTH) { // puls is so short -> this is no packet or time out
-		//Serial.println("S");
-		PulseLength=0L;
-		RawCodeLength=1;
-		return;
-	}
-
-	if ( RawCodeLength<RAW_BUFFER_SIZE ) {
-		RawSignal.Pulses[RawCodeLength++]=4+PulseLength/(unsigned long)(RAWSIGNAL_SAMPLE_RATE); // store in RawSignal !!!!  (+4 is corection beatwen arduino cycle time calculate and real time from raspberryPi)
-	}
-	else { // Raw data reach max size
-		//setRawSignal(RawCodeLength);
-		PulseLength=0L;
-		RawCodeLength=1;
-		return;
-	}
-
-	//if ( PulseLength >= SIGNAL_TIMEOUT*1000 ) {
-	if ( PulseLength >= 3500 ) {
-		
-		//Serial.println("S");
-		//Serial.println(abs(FristPulseLength-PulseLength));
-		if (abs(FristPulseLength-PulseLength) < 200 and LastRawCodeLength==RawCodeLength) {
-			//Serial.println("SS");
-			// This long signal is close in length to the long signal which
-			// started the previously recorded timings; this suggests that
-			// it may indeed by a a gap between two transmissions (we assume
-			// here that a sender will send the signal multiple times,
-			// with roughly the same gap between them).
-			RawSignal.Repeats++;
-			if (RawSignal.Repeats == 2) {
-				//Serial.println("SSS");
-				if (RawCodeLength>MIN_RAW_PULSES) {
-					//Serial.println("SSSS");
-					setRawSignal(RawCodeLength); // go to search right 
-				}
-				RawSignal.Repeats = 0;
-			}
+	// reduce repeated signal
+	// After a positive packet reception, the packet is assumed to be repeated.
+	// Therefore, all subsequent communications into the long signal (significant termination of transmissions) is ignored.
+	// In the case of long uninterrupted transmissions, where long signal not present, the SIGNAL_REPEAT_TIME terminates reduction.
+	// Some modules do not set RawSignal.Repeats=true and use own solve.
+	if (RawSignal.Repeats==true){
+		if (log_repeat==true){
+			log(LOG_STATUS,"RawSignal: RawSignal.Repeats=true.");
+			log_repeat=false;
 		}
-		FristPulseLength=PulseLength;
-		LastRawCodeLength=RawCodeLength;
-		RawCodeLength=1;
+		//if ((RawSignal.Time+SIGNAL_REPEAT_TIME)>millis()) { 
+		if (RepeatingTimer>millis()) { 
+			if (PulseLength<SIGNAL_TIMEOUT*1000*4) { // much more than SIGNAL_TIMEOUT(=len_sync_pulse) detec end of transmit
+				//log(LOG_STATUS,"return back from interput."); 
+				return;
+			}
+			log(LOG_STATUS,"RawSignal: end Repeats by log impuls"); 
+			RawSignal.Repeats=false;
+			RawCodeLength=1;
+		}
+		else {
+			log(LOG_STATUS,"RawSignal: end Repeats by end REPEAT_TIME"); 
+			RawSignal.Repeats=false;
+			RawCodeLength=1;
+		}		
 	}
 	
+	//Every devices send data in packets whith diferent format. This packets is consecutive repeates more times, for better 
+	//probability sucessfully receive packet. But still never you have assurance 100%, that packet was sucessfully receive.
+	//Problem is corect detect start point of packet, because when nobody transmit data, receiver is set to max sensitivy 
+	//and receivere noise. After receive corect signal, recever reduce sensitivy and receivre only this signal. 
+	//Standar packet uses start or stop synchronizatinou pulses who is more leng then data signals and can be used for detect packet.
+	//Unfortunately most devices use zero level synchronization pulse, this is reason why can not be detec 
+	//beginning first packet but alse secound.
+	//This hook use RawCodeLength=0 as flag for wait into sync impuls. This reduces occurrence of packet with noise on beginning.
+	if ( PulseLength < MIN_PULSE_LENGTH) { // puls is so short -> this is no packet or time out
+		//Serial.println("S");
+		RawCodeLength=0;
+		return;
+	}
 
-	/*
-	if ( RawCodeLength<RAW_BUFFER_SIZE ) {
+	if ( RawCodeLength<RAW_BUFFER_SIZE && RawCodeLength!=0) {
 		RawSignal.Pulses[RawCodeLength++]=4+PulseLength/(unsigned long)(RAWSIGNAL_SAMPLE_RATE); // store in RawSignal !!!!  (+4 is corection beatwen arduino cycle time calculate and real time from raspberryPi)
 	}
-	else { // Raw data reach max size
+	
+	if ( RawCodeLength>=RAW_BUFFER_SIZE) { // Raw data reach max size (too mach long for corect data)
 		//setRawSignal(RawCodeLength);
-		PulseLength=0L;
-		RawCodeLength=1;
+		RawCodeLength=0;
 		return;
 	}
-	if ( PulseLength < MIN_PULSE_LENGTH or PulseLength >= SIGNAL_TIMEOUT*1000 ) { // puls is so short -> this is no packet or time out
+
+	if ( PulseLength >= SIGNAL_TIMEOUT*1000 ) {
 		//Serial.println("S");
 		if (RawCodeLength>=MIN_RAW_PULSES) { // Raw data satisfy min. size
-			//setRawSignal(RawCodeLength);
+			setRawSignal(RawCodeLength);
+			RawCodeLength=0;
 		}
-		PulseLength=0L;
-		RawCodeLength=1;
+		else { // frist sync pulse
+			RawCodeLength=1;		// Start at 1 for legacy reasons and indicate start new scanining
+		}
 		return;
 	}
-	*/
 }
 
 /**

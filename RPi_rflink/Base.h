@@ -23,8 +23,8 @@
 #define MIN_RAW_PULSES                    20                                    // =8 bits. Minimal number of bits*2 that need to have been received before we spend CPU time on decoding the signal.
 #define RAWSIGNAL_SAMPLE_RATE             30                                    // Sample width / resolution in uSec for raw RF pulses.
 #define MIN_PULSE_LENGTH                  25                                    // Pulses shorter than this value in uSec. will be seen as garbage and not taken as actual pulses.
-#define SIGNAL_TIMEOUT                     5                               		// Timeout, after this time in mSec. the RF signal will be considered to have stopped.
-#define SIGNAL_REPEAT_TIME               500                                    // Time in mSec. in which the same RF signal should not be accepted again. Filters out retransmits.
+#define SIGNAL_TIMEOUT                    4                             		// Timeout, after this time in mSec. the RF signal will be considered to have stopped.
+#define SIGNAL_REPEAT_TIME              1000                                    // Time in mSec. in which the same RF signal should not be accepted again. Filters out retransmits.
 #define BAUD                           57600                                    // Baudrate for serial communication.
 #define TRANSMITTER_STABLE_DELAY         500                                    // delay to let the transmitter become stable (Note: Aurel RTX MID needs 500µS/0,5ms).
 #define RAW_BUFFER_SIZE                  512                                    // Maximum number of pulses that is received in one go.
