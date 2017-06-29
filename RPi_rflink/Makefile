@@ -42,9 +42,13 @@ install: ./RFlink
 	if ! [ -f "/opt/rflink/RFlink" ] ; then cp "./RFlink" "/opt/rflink/" ; fi ;
 	if ! [ -f "/etc/rflink.conf" ] ; then cp "./etc/rflink.conf" "/etc/" ; fi ;
 	if ! [ -f "/etc/init.d/rflink.sh" ] ; then cp "./etc/init.d/rflink.sh" "/etc/init.d/" ; fi
+	update-rc.d rflink defaults
+	update-rc.d rflink enable
 
 # must be run as sudo (sudo make uninstall)
 uninstall:
+	update-rc.d rflink remove
+	if [ -f "/etc/init.d/rflink.sh" ] ; then /etc/init.d/rflink.sh stop ; fi
 	if [ -f "/etc/init.d/rflink.sh" ] ; then rm "/etc/init.d/rflink.sh" ; fi
 	if [ -f "/etc/rflink.conf" ] ; then rm "/etc/rflink.conf" ; fi ;
 	if [ -f "/opt/rflink/RFlink" ] ; then rm "/opt/rflink/RFlink" ; fi ;
