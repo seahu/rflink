@@ -11,7 +11,6 @@
 
 dir="/opt/rflink"
 cmd="./RFlink"
-cmd_to_syslog="./RFlink-syslog.sh"
 user=""
 TCP_port=5050
 PIN_TX=28
