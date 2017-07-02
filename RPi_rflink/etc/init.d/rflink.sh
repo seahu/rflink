@@ -9,8 +9,11 @@
 # Description:       This daemon will start 433 MHz control and sniffer and specialy used for Domoticz Home Automation System
 ### END INIT INFO
 
-dir="/opt/rflink"
-cmd="./RFlink"
+
+DAEMON="/opt/rflink/RFlink"
+config_file="/etc/rflink.conf"
+
+# default config
 user=""
 TCP_port=5050
 PIN_TX=28
@@ -18,111 +21,47 @@ PIN_RX=29
 log_level=1
 log_file=""
 
-#include config file (may redefine TCP_port, log_level, log_file)
-. /etc/rflink.conf
+#include config file  if exist (may redefine TCP_port, log_level, log_file)
+if [ -f "$config_file" ]; then
+    . /etc/rflink.conf
+fi
 
-cmd="$cmd $TCP_port $PIN_TX $PIN_RX $log_level"
-cmd_to_syslog="$cmd_to_sysylog $TCP_port $PIN_TX $PIN_RX $log_level"
+. /lib/lsb/init-functions
 
 name=`basename $0`
-pid_file="/var/run/$name.pid"
-
-get_pid() {
-    cat "$pid_file"
-}
-
-is_running() {
-    [ -f "$pid_file" ] && ps `get_pid` > /dev/null 2>&1
-}
-
-
-killtree() {
-    local parent=$1 child
-    for child in $(ps -o ppid= -o pid= | awk "\$1==$parent {print \$2}"); do
-        killtree $child
-    done
-    kill $parent 2> /dev/null
-}
-
-start_with_logger() {
-    if [ -z "$user" ]; then
-	sudo $cmd | logger
-    else
-	sudo -u "$user" $cmd | logger
-    fi
-}
-
-start_with_log_file() {
-    if [ -z "$user" ]; then
-	sudo $cmd >> "$log_file"
-    else
-	sudo -u "$user" $cmd >> "$log_file"
-    fi
-}
+PIDFILE="/var/run/$name.pid"
 
 case "$1" in
     start)
-    if is_running; then
-        echo "Already started"
-    else
         echo "Starting $name"
-        cd "$dir"
-	if [ -z "$log_file" ]; then
-	    start_with_logger &
+        if [ -z "$user" ]; then
+	    #start-stop-daemon --start --verbose --background --pidfile $PIDFILE --make-pidfile --exec $DAEMON
+	    if [ -z "$log_file" ]; then
+		start-stop-daemon -S -x $DAEMON -b -C -v -m -p $PIDFILE -- | logger -t $name &
+	    else
+		start-stop-daemon -S -x $DAEMON -b -C -v -m -p $PIDFILE -- >> $log_file
+	    fi
 	else
-	    start_with_log_file &
+	    if [ -z "$log_file" ]; then
+		start-stop-daemon -S -c $user -x $DAEMON -b -C -v -m -p $PIDFILE -- | logger -t $name &
+	    else
+		start-stop-daemon -S -c $user -x $DAEMON -b -C -v -m -p $PIDFILE -- >> $log_file
+	    fi
 	fi
-        echo $! > "$pid_file"
-        if ! is_running; then
-            echo "Unable to start, see $stdout_log and $stderr_log"
-            exit 1
-        fi
-    fi
-    ;;
+	;;
     stop)
-    if is_running; then
-        echo -n "Stopping $name.."
-        killtree `get_pid`
-        for i in {1..10}
-        do
-            if ! is_running; then
-                break
-            fi
-
-            echo -n "."
-            sleep 1
-        done
-        echo
-
-        if is_running; then
-            echo "Not stopped; may still be shutting down or shutdown may have failed"
-            exit 1
-        else
-            echo "Stopped"
-            if [ -f "$pid_file" ]; then
-                rm "$pid_file"
-            fi
-        fi
-    else
-        echo "Not running"
-    fi
-    ;;
+    	echo -n "Stopping $name."
+	#pkill -P `cat $PIDFILE`
+	start-stop-daemon -K -x $DAEMON -p $PIDFILE --remove-pidfile
+	;;
     restart)
-    $0 stop
-    if is_running; then
-        echo "Unable to stop, will not attempt to start"
-        exit 1
-    fi
-    $0 start
-    ;;
+	echo -n "Restarting $name."
+	$0 stop
+	$0 start
+	;;
     status)
-    if is_running; then
-        echo "Running"
-    else
-        echo "Stopped"
-        exit 1
-    fi
-    ;;
+	start-stop-daemon -T -x $DAEMON
+	;;
     *)
     echo "Usage: $0 {start|stop|restart|status}"
     exit 1

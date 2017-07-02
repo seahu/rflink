@@ -76,7 +76,7 @@ int TCPserver(int port)
 		log(LOG_ERROR,"TCP server: Problem add name to socket.");
 		return -1;
 	}
-	if (listen(mainSocket, 10) == -1) // create reguest queue  (max 10)
+	if (listen(mainSocket, 1) == -1) // create reguest queue  (max 1)
 	{
 		log(LOG_ERROR,"TCP server: Problem create reguest queue.");
 		return -1;

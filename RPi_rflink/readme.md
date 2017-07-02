@@ -112,6 +112,7 @@ for end connection type:
 ## Note
 
 This tested only witch 433MHz receiver. And tested only with free aviable modules, full version contain much more no tested plugins.
+This server accept only one connection at same time, mainly for to prevent colision.
 
 
 ### Autor
