@@ -28,7 +28,7 @@ fi
 
 CONFIG="$TCP_port $PIN_TX $PIN_RX $log_level"
 
-#. /lib/lsb/init-functions
+. /lib/lsb/init-functions
 
 name=`basename $0`
 PIDFILE="/var/run/$name.pid"
@@ -39,7 +39,6 @@ case "$1" in
         if [ -z "$user" ]; then
 	    #start-stop-daemon --start --verbose --background --pidfile $PIDFILE --make-pidfile --exec $DAEMON
 	    if [ -z "$log_file" ]; then
-		echo "start-stop-daemon -S -x $DAEMON -b -C -v -m -p $PIDFILE -- $CONFIG | logger -t $name &"
 		start-stop-daemon -S -x $DAEMON -b -C -v -m -p $PIDFILE -- $CONFIG | logger -t $name &
 	    else
 		start-stop-daemon -S -x $DAEMON -b -C -v -m -p $PIDFILE -- $CONFIG >> $log_file
