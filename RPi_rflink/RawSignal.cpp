@@ -66,7 +66,7 @@ int StopScanEventTheader(){
 // This function only fill in RawSignal struture and unlock condition varible used in function ScanEvent() who do main work for process data.
 void setRawSignal(int RawCodeLength){
 	sprintf(pbuffer,"Spracovani paketu delky:: %d",RawCodeLength);
-	log(LOG_STATUS,pbuffer);
+	log(LOG_DEBUG,pbuffer);
 	
 	pthread_mutex_lock(&thread_flag_mutex);
 	
@@ -106,7 +106,7 @@ void handleInterrupt() {
 	// Some modules do not set RawSignal.Repeats=true and use own solve.
 	if (RawSignal.Repeats==true){
 		if (log_repeat==true){
-			log(LOG_STATUS,"RawSignal: RawSignal.Repeats=true.");
+			log(LOG_DEBUG,"RawSignal: RawSignal.Repeats=true.");
 			log_repeat=false;
 		}
 		//if ((RawSignal.Time+SIGNAL_REPEAT_TIME)>millis()) { 
@@ -115,12 +115,12 @@ void handleInterrupt() {
 				//log(LOG_STATUS,"return back from interput."); 
 				return;
 			}
-			log(LOG_STATUS,"RawSignal: end Repeats by log impuls"); 
+			log(LOG_DEBUG,"RawSignal: end Repeats by log impuls"); 
 			RawSignal.Repeats=false;
 			RawCodeLength=1;
 		}
 		else {
-			log(LOG_STATUS,"RawSignal: end Repeats by end REPEAT_TIME"); 
+			log(LOG_DEBUG,"RawSignal: end Repeats by end REPEAT_TIME"); 
 			RawSignal.Repeats=false;
 			RawCodeLength=1;
 		}		

@@ -18,7 +18,7 @@ user=""
 TCP_port=5050
 PIN_TX=28
 PIN_RX=29
-log_level=1
+log_level=3
 log_file=""
 
 #include config file  if exist (may redefine TCP_port, log_level, log_file)
@@ -26,7 +26,9 @@ if [ -f "$config_file" ]; then
     . /etc/rflink.conf
 fi
 
-. /lib/lsb/init-functions
+CONFIG="$TCP_port $PIN_TX $PIN_RX $log_level"
+
+#. /lib/lsb/init-functions
 
 name=`basename $0`
 PIDFILE="/var/run/$name.pid"
@@ -37,15 +39,16 @@ case "$1" in
         if [ -z "$user" ]; then
 	    #start-stop-daemon --start --verbose --background --pidfile $PIDFILE --make-pidfile --exec $DAEMON
 	    if [ -z "$log_file" ]; then
-		start-stop-daemon -S -x $DAEMON -b -C -v -m -p $PIDFILE -- | logger -t $name &
+		echo "start-stop-daemon -S -x $DAEMON -b -C -v -m -p $PIDFILE -- $CONFIG | logger -t $name &"
+		start-stop-daemon -S -x $DAEMON -b -C -v -m -p $PIDFILE -- $CONFIG | logger -t $name &
 	    else
-		start-stop-daemon -S -x $DAEMON -b -C -v -m -p $PIDFILE -- >> $log_file
+		start-stop-daemon -S -x $DAEMON -b -C -v -m -p $PIDFILE -- $CONFIG >> $log_file
 	    fi
 	else
 	    if [ -z "$log_file" ]; then
-		start-stop-daemon -S -c $user -x $DAEMON -b -C -v -m -p $PIDFILE -- | logger -t $name &
+		start-stop-daemon -S -c $user -x $DAEMON -b -C -v -m -p $PIDFILE -- $CONFIG | logger -t $name &
 	    else
-		start-stop-daemon -S -c $user -x $DAEMON -b -C -v -m -p $PIDFILE -- >> $log_file
+		start-stop-daemon -S -c $user -x $DAEMON -b -C -v -m -p $PIDFILE -- $CONFIG >> $log_file
 	    fi
 	fi
 	;;

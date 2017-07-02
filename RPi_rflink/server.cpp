@@ -40,8 +40,8 @@ int socket_getline(char* buf, int size)
 
 int socket_send(const char* buf, const int size)
 {
-	log(LOG_DEBUG,"TCP server send: ",false);
-	log(LOG_DEBUG,buf);
+	log(LOG_STATUS,"TCP server send: ",false);
+	log(LOG_STATUS,buf);
 	int ret=send(clientSocket, buf, size, 0);
 	if ( ret == -1 ) {  // +1 for NUL terminator
 		clientSocket=-1;
@@ -93,7 +93,9 @@ int TCPserver(int port)
 			log(LOG_ERROR,"TCP server: Problem conect with client.");
 			return -1;
 		}
-		log(LOG_STATUS,"TCP server: Client connect.");
+		sprintf(pbuffer, "TCP server: Connect client with addr: %s.", inet_ntoa((in_addr)clientInfo.sin_addr) );
+		log(LOG_STATUS, pbuffer);
+		//log(LOG_STATUS,"TCP server: Client connect.");
 		// --------------------- conction is stored now can work -----------------------------
 		Serial.set_send_function(socket_send); // enable Serial.println send line by socket
 		Serial.print(WELCOME);
