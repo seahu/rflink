@@ -11,6 +11,7 @@
 
 
 bool enableRawScan=true; // flag for end RawSignal thread
+bool isActiveIntrupt=false; // flag for frist start interupt (Protection against re-initialization interrupt)
 
 bool ReceiverInterrupt=false; // flag signalzet enabled or disabled interupt (exist because for Raspberry Pi (wiringPi) you can't unregister the ISR)
 pthread_cond_t thread_flag_cv;
@@ -174,8 +175,14 @@ void enableReceive() {
 	RawSignal.Multiply=0;                                                                // Pulses[] * Multiply is the real pulse time in microseconds 
 	RawSignal.Time=0;                                                           // Timestamp indicating when the signal was received (millis())
 	RawSignal.Pulses[0]=0;
-	log(LOG_HARD_DEBUG,"RawSignal: Enable interrupt.");
-	wiringPiISR(PIN_RF_RX_DATA, INT_EDGE_BOTH, &handleInterrupt);
+	if (isActiveIntrupt==false) {
+		log(LOG_HARD_DEBUG,"RawSignal: Enable interrupt.");
+		wiringPiISR(PIN_RF_RX_DATA, INT_EDGE_BOTH, &handleInterrupt);
+		isActiveIntrupt=true;
+	}
+	else {
+		log(LOG_HARD_DEBUG,"RawSignal: Interrupt is already enabled.");
+	}
 }
 
 /**
