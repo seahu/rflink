@@ -47,6 +47,8 @@ int socket_send(const char* buf, const int size)
 		clientSocket=-1;
 		Serial.set_send_function(NULL); // disable Serial.println send line by socket = disable this function
 		log(LOG_ERROR,"TCP server: Problem send data.");
+		log(LOG_ERROR,"TCP server: Connection close.");
+		close(clientSocket);
 	}
 	return ret;
 }
